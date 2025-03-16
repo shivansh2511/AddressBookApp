@@ -1,8 +1,7 @@
-namespace AddressBookAPI.Models
+namespace AddressBookAPI.DTOs
 {
-    public class AddressBookEntry
+    public class AddressBookDto
     {
-        public int Id { get; set; }
         public string Name { get; set; }
         public string Email { get; set; }
         public string Phone { get; set; }

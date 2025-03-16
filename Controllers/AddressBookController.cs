@@ -1,91 +1,55 @@
-// Controllers/AddressBookController.cs
-using Microsoft.AspNetCore.Mvc;
-using AddressBookAPI.Data;
+using AddressBookAPI.DTOs;
 using AddressBookAPI.Models;
-using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+using AddressBookAPI.ServiceLayer;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AddressBookAPI.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     public class AddressBookController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IAddressBookService _service;
 
-        // Inject the AppDbContext via constructor injection.
-        public AddressBookController(AppDbContext context)
+        public AddressBookController(IAddressBookService service)
         {
-            _context = context;
+            _service = service;
         }
 
-        // GET /api/addressbook - Fetch all contacts.
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<AddressBookEntry>>> GetAll()
+        public ActionResult<IEnumerable<AddressBookEntry>> GetAll()
         {
-            var contacts = await _context.AddressBookEntries.ToListAsync();
-            return Ok(contacts);
+            return Ok(_service.GetAll());
         }
 
-        // GET /api/addressbook/{id} - Get contact by ID.
         [HttpGet("{id}")]
-        public async Task<ActionResult<AddressBookEntry>> GetById(int id)
+        public ActionResult<AddressBookEntry> GetById(int id)
         {
-            var contact = await _context.AddressBookEntries.FindAsync(id);
-            if (contact == null)
-            {
-                return NotFound();
-            }
-            return Ok(contact);
+            var entry = _service.GetById(id);
+            if (entry == null) return NotFound();
+            return Ok(entry);
         }
 
-        // POST /api/addressbook - Add a new contact.
         [HttpPost]
-        public async Task<ActionResult<AddressBookEntry>> Create(AddressBookEntry entry)
+        public ActionResult<AddressBookEntry> Create([FromBody] AddressBookDto dto)
         {
-            _context.AddressBookEntries.Add(entry);
-            await _context.SaveChangesAsync();
-            // Returns a 201 Created response with the new resource location.
-            return CreatedAtAction(nameof(GetById), new { id = entry.Id }, entry);
+            var newEntry = _service.Add(dto);
+            return CreatedAtAction(nameof(GetById), new { id = newEntry.Id }, newEntry);
         }
 
-        // PUT /api/addressbook/{id} - Update a contact.
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, AddressBookEntry entry)
+        public IActionResult Update(int id, [FromBody] AddressBookDto dto)
         {
-            if (id != entry.Id)
-            {
-                return BadRequest("ID mismatch");
-            }
-
-            _context.Entry(entry).State = EntityState.Modified;
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (await _context.AddressBookEntries.FindAsync(id) == null)
-                {
-                    return NotFound();
-                }
-                throw;
-            }
-            return NoContent();
+            var updatedEntry = _service.Update(id, dto);
+            if (updatedEntry == null) return NotFound();
+            return Ok(updatedEntry);
         }
 
-        // DELETE /api/addressbook/{id} - Delete a contact.
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public IActionResult Delete(int id)
         {
-            var entry = await _context.AddressBookEntries.FindAsync(id);
-            if (entry == null)
-            {
-                return NotFound();
-            }
-            _context.AddressBookEntries.Remove(entry);
-            await _context.SaveChangesAsync();
+            var deleted = _service.Delete(id);
+            if (!deleted) return NotFound();
             return NoContent();
         }
     }

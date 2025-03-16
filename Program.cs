@@ -1,28 +1,37 @@
-using Microsoft.EntityFrameworkCore;
 using AddressBookAPI.Data;
+using AddressBookAPI.ServiceLayer;
+using AddressBookAPI.Validators;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Register the DbContext with the SQL Server provider.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// Configure Database Connection
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add controllers support.
-builder.Services.AddControllers();
+// Register Services
+builder.Services.AddScoped<IAddressBookService, AddressBookService>();
 
-// Add Swagger for API documentation.
+// Add FluentValidation
+builder.Services.AddControllers().AddFluentValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<AddressBookValidator>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+// Configure Middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+
 app.Run();
